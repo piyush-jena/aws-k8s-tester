@@ -110,35 +110,36 @@ func checkNodeTypes(ctx context.Context, config *envconf.Config) (context.Contex
 		}
 		neuron, err := e2e.GetNonZeroResourceCapacity(&node, "aws.amazon.com/neuron")
 		if err != nil {
-			return nil, err
+			log.Printf("Skipping node %s: %v", node.Name, err)
+			continue
 		}
-		totalNeuronCount += neuron
 
-		// Check for NeuronCore capacity
 		neuronCore, err := e2e.GetNonZeroResourceCapacity(&node, "aws.amazon.com/neuroncore")
 		if err != nil {
-			return nil, err
+			log.Printf("Skipping node %s: %v", node.Name, err)
+			continue
 		}
-		totalNeuronCoreCount += neuronCore
 
-		// Check for EFA capacity
 		if *efaEnabled {
 			efa, err := e2e.GetNonZeroResourceCapacity(&node, "vpc.amazonaws.com/efa")
 			if err != nil {
-				return nil, err
+				log.Printf("Skipping node %s: %v", node.Name, err)
+				continue
 			}
 			totalEfaCount += efa
 		}
+
+		totalNeuronCount += neuron
+		totalNeuronCoreCount += neuronCore
 		nodeCount += 1
 	}
 
-	// Update global capacities
 	if nodeCount > 0 {
 		neuronPerNode = totalNeuronCount / nodeCount
 		neuronCorePerNode = totalNeuronCoreCount / nodeCount
 		efaPerNode = totalEfaCount / nodeCount
 	} else {
-		return nil, fmt.Errorf("no nodes of type %q found", *nodeType)
+		return nil, fmt.Errorf("no nodes of type %q with required neuron resources found", *nodeType)
 	}
 
 	log.Printf("[INFO] Total Nodes: %d", nodeCount)
